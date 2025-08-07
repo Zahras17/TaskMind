@@ -1,0 +1,242 @@
+.sequence-view {
+  padding: 0.1vw; /* Reduced padding */
+}
+
+.sequence-view h3 {
+  margin-top: 0.1vw; /* Reduced top margin for Task Allocation title */
+  margin-bottom: 0.3vw;
+  font-size: 1.2vw;
+  font-weight: bold;
+}
+
+.task-card {
+  padding: 0.15vw 0.2vw;   /* Reduced padding */
+  margin-bottom: 0.2vw;     /* Reduced margin */
+  border: 0.07vw solid #ddd; 
+  border-radius: 0.2vw;   
+  font-size: 0.7vw;       
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 18vw; 
+  width:20vw;
+  margin-left: -0.1vw;
+  /* overflow:hidden; */
+}
+
+.task-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.1vw;              
+  width: 100%;
+}
+
+.task-name {
+  flex: 1;
+  font-weight: bold;
+  margin-bottom: 0.2vw;     
+}
+
+.slider-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.05vw;             
+}
+
+/* .slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.005vw;              
+} */
+
+input[type="range"] {
+  appearance: none;
+  width: 6vw;           
+  height: 0.5vw;           
+  border-radius: 0.3vw;  
+  background: linear-gradient(to right, #ffd54f 0%, #ccc 50%, #64b5f6 100%);
+  background-size: 200% 100%;
+  background-position: center;
+  transition: background-position 0.3s ease-in-out;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 1.1vw;             
+  height: 1.1vw;            
+  border-radius: 50%;
+  background: #333;
+}
+
+.task-card.unassigned {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.task-card.human {
+  background-color: #ffeb3b;
+  color: #000;
+}
+
+.task-card.robot {
+  background-color: #64b5f6;
+  color: white;
+}
+
+.lock-icon {
+  margin-left: 0;
+  color: red;
+  font-size: 0.7vw;        
+}
+
+/* Dependency Group Styles */
+.dependency-group-container {
+  border: 2px solid #ff6b6b;
+  border-radius: 0.3vw;
+  background-color: #fff5f5;
+  margin-bottom: 0.3vw; /* Reduced margin */
+  overflow: hidden;
+  width:20vw;
+  cursor: grab;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.dependency-group-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dependency-group-container:active {
+  cursor: grabbing;
+}
+
+.dependency-group-header {
+  background-color: #ff6b6b;
+  padding: 0.2vw;
+  text-align: center;
+  pointer-events: none;
+}
+
+.dependency-group-label {
+  font-size: 0.6vw;
+  font-weight: bold;
+  color: white;
+  margin: 0;
+}
+
+.dependency-group-content {
+  padding: 0.2vw; /* Reduced padding */
+}
+
+.dependency-group-content .task-card {
+  margin-bottom: 0.1vw; /* Reduced margin */
+  border: 1px solid #ddd;
+}
+
+.dependency-group-content .task-card:last-child {
+  margin-bottom: 0;
+}
+
+/* Ensure color classes work inside dependency groups */
+.dependency-group-content .task-card.human {
+  background-color: #ffeb3b !important;
+  color: #000 !important;
+}
+
+.dependency-group-content .task-card.robot {
+  background-color: #64b5f6 !important;
+  color: white !important;
+}
+
+.dependency-group-content .task-card.unassigned {
+  background-color: #e0e0e0 !important;
+  color: #333 !important;
+}
+
+/* Independent tasks */
+.independent-task-container {
+  border: 2px solid #ff6b6b;
+  border-radius: 0.3vw;
+  background-color: #fff5f5;
+  margin-bottom: 0.3vw; /* Reduced margin */
+  overflow: hidden;
+  width: 20.7vw;
+  min-width: 19.5vw;
+  cursor: grab;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.independent-task-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.independent-task-container:active {
+  cursor: grabbing;
+}
+
+.independent-task-container .task-card {
+  border: 1px solid #ddd;
+}
+
+/* Ensure color classes work for independent tasks too */
+.independent-task-container .task-card.human {
+  background-color: #ffeb3b !important;
+  color: #000 !important;
+}
+
+.independent-task-container .task-card.robot {
+  background-color: #64b5f6 !important;
+  color: white !important;
+}
+
+.independent-task-container .task-card.unassigned {
+  background-color: #e0e0e0 !important;
+  color: #333 !important;
+}
+
+/* Drag and drop visual feedback */
+.dependency-group-container[data-dragging="true"],
+.independent-task-container[data-dragging="true"] {
+  opacity: 0.5;
+  transform: rotate(5deg);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Drop zone indicator */
+.dependency-group-container[data-over="true"],
+.independent-task-container[data-over="true"] {
+  border-color: #4CAF50;
+  background-color: #e8f5e8;
+}
+
+/* Drag handle indicator */
+.dependency-group-container::before,
+.independent-task-container::before {
+  content: "⋮⋮";
+  position: absolute;
+  top: -0.2vw;
+  right: 0.1vw;
+  font-size: 0.8vw;
+  color: #666;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.dependency-group-container:hover::before,
+.independent-task-container:hover::before {
+  opacity: 1;
+  color: #333;
+}

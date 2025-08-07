@@ -1,0 +1,180 @@
+import React, { useState, useEffect } from "react";
+import TaskSequenceView from "./components/TaskSequenceView";
+import GraphicalTaskFlow from "./components/GraphicalTaskFlow";
+import InstructionPanel from "./components/InstructionPanel";
+import axios from "axios";
+import "./App.css";
+
+const initialTasks = [
+  { id: "1", name: "Task 1: Pick yellow part", assignedTo: "Unassigned", description: "Pick the yellow part from the box.", image: "/pick.png" },
+  { id: "2", name: "Task 2: Screw", assignedTo: "Unassigned", description: "Use the screwdriver to fasten the screw.", image: "/screw.png" },
+  { id: "3", name: "Task 3: Assemble frame", assignedTo: "Unassigned", description: "Assemble the frame using connectors.", image: "/assemble.png" },
+  { id: "4", name: "Task 4: Insert cable", assignedTo: "Unassigned", description: "Insert the cable into the connector.", image: "/cable.png" },
+  { id: "5", name: "Task 5: Tighten bolts", assignedTo: "Unassigned", description: "Tighten bolts using the wrench.", image: "/tighten.png" },
+  { id: "6", name: "Task 6: Attach sensor", assignedTo: "Unassigned", description: "Attach the sensor to the top.", image: "/sensor.png" },
+  { id: "7", name: "Task 7: Fasten cover", assignedTo: "Unassigned", description: "Fasten the protective cover.", image: "/cover.png" },
+  { id: "8", name: "Task 8: Mount display", assignedTo: "Unassigned", description: "Mount the display onto the frame.", image: "/display.png" },
+  { id: "9", name: "Task 9: Connect battery", assignedTo: "Unassigned", description: "Connect the battery securely.", image: "/battery.png" },
+  { id: "10", name: "Task 10: Final inspection", assignedTo: "Unassigned", description: "Perform final inspection of assembly.", image: "/inspection.png" },
+];
+
+function App() {
+  const [tasks, setTasks] = useState(initialTasks);
+  const [currentHumanStep, setCurrentHumanStep] = useState(0);
+  const [finished, setFinished] = useState(false);
+
+  const [robotTaskQueue, setRobotTaskQueue] = useState([]);
+  const [currentRobotTaskIndex, setCurrentRobotTaskIndex] = useState(0);
+  const [isRobotRunning, setIsRobotRunning] = useState(false);
+  const [isRobotPaused, setIsRobotPaused] = useState(false);
+  const [robotStarted, setRobotStarted] = useState(false);
+
+  const humanTasks = tasks.filter((t) => t.assignedTo === "Human");
+
+  const isLast = currentHumanStep === humanTasks.length - 1;
+
+  const currentInstruction = humanTasks.length > 0 && currentHumanStep < humanTasks.length
+    ? {
+        ...humanTasks[currentHumanStep],
+        isLast,
+      }
+    : null;
+
+  const updateTaskRole = (taskId, assignedTo) => {
+    const updatedTasks = tasks.map((task) =>
+      task.id === taskId ? { ...task, assignedTo } : task
+    );
+    setTasks(updatedTasks);
+  };
+
+  const startRobot = () => {
+    if (!isRobotRunning) {
+      const robotTasks = tasks.filter((t) => t.assignedTo === "Robot");
+      setRobotTaskQueue(robotTasks);
+      setCurrentRobotTaskIndex(0);
+      setIsRobotRunning(true);
+      setIsRobotPaused(false);
+      setRobotStarted(true); // Mark that robot has started
+    }
+  };
+
+  const pauseRobot = async () => {
+    try {
+      console.log("⏸️ Sending Pause command to robot");
+      await axios.get("http://127.0.0.1:8000/robot/pause");
+      setIsRobotPaused(true);
+      console.log("✅ Robot paused");
+    } catch (error) {
+      console.error("❌ Failed to pause robot:", error);
+    }
+  };
+
+  const resumeRobot = async () => {
+    try {
+      console.log("▶️ Sending Resume command to robot");
+      await axios.get("http://127.0.0.1:8000/robot/resume");
+      setIsRobotPaused(false);
+      console.log("✅ Robot resumed");
+    } catch (error) {
+      console.error("❌ Failed to resume robot:", error);
+    }
+  };
+
+  const nextHumanTask = () => {
+    if (currentHumanStep < humanTasks.length - 1) {
+      setCurrentHumanStep((prev) => prev + 1);
+    } else {
+      setFinished(true);
+      setCurrentHumanStep((prev) => prev + 1);
+    }
+  };
+
+  const prevHumanTask = () => {
+    if (currentHumanStep > 0) {
+      setCurrentHumanStep((prev) => prev - 1);
+    } else if (currentHumanStep === 0) {
+      setFinished(false);
+      setCurrentHumanStep(0); // Stay at first human task
+    }
+  };
+
+  const restartTasks = () => {
+    setCurrentHumanStep(0);
+    setFinished(false);
+    setIsRobotRunning(false);
+    setRobotTaskQueue([]);
+    setCurrentRobotTaskIndex(0);
+    setRobotStarted(false); // Reset robot started state
+  };
+
+  useEffect(() => {
+    const executeRobotTask = async () => {
+      if (
+        isRobotRunning &&
+        !isRobotPaused &&
+        robotTaskQueue.length > 0 &&
+        currentRobotTaskIndex < robotTaskQueue.length
+      ) {
+        const task = robotTaskQueue[currentRobotTaskIndex];
+        try {
+          console.log(`🔵 Sending request to execute task_${task.id}`);
+          await axios.get(`http://127.0.0.1:8000/robot/execute/task_${task.id}`);
+          console.log(`✅ Robot executed task_${task.id}`);
+          setTimeout(() => {
+            setCurrentRobotTaskIndex((prev) => prev + 1);
+          }, 1000); // Add a small delay between tasks
+        } catch (error) {
+          console.error("❌ Error executing robot task:", error);
+        }
+      }
+    };
+
+    executeRobotTask();
+  }, [isRobotRunning, isRobotPaused, currentRobotTaskIndex, robotTaskQueue]);
+
+  return (
+    <div className="container">
+      <div className="main-panel">
+        <div className="left-panel">
+          <div className="top-left-panel">
+            <GraphicalTaskFlow
+              tasks={tasks}
+              currentHumanStep={currentHumanStep}
+              robotTaskQueue={robotTaskQueue}
+              currentRobotTaskIndex={currentRobotTaskIndex}
+            />
+          </div>
+          <div className="bottom-panel">
+            <div className="instruction-content">
+              <InstructionPanel
+                instruction={currentInstruction?.description}
+                image={currentInstruction?.image}
+                nextStep={nextHumanTask}
+                prevStep={prevHumanTask}
+                finished={finished}
+                restart={restartTasks}
+                isLast={isLast}
+              />
+            </div>
+            <div className="robot-controls">
+              {!robotStarted && (
+                <button onClick={startRobot}>▶️ Start Robot</button>
+              )}
+              <button onClick={pauseRobot}>⏸️ Pause Robot</button>
+              <button onClick={resumeRobot}>▶️ Resume Robot</button>
+            </div>
+          </div>
+        </div>
+        <div className="right-panel">
+          <TaskSequenceView
+            tasks={tasks}
+            setTasks={setTasks}
+            updateTaskRole={updateTaskRole}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;

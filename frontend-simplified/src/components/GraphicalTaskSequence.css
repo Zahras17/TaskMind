@@ -1,0 +1,216 @@
+.graphical-flow {
+  padding: 0.2vw;
+  background-color: #fafafa;
+  border-radius: 0.6vw;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  min-height: 0;  
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.graphical-flow > div:first-child {
+  flex-shrink: 0; /* Keep title at top */
+}
+
+.dependency-groups-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.01vw; /* Smaller gap between dependency groups */
+  align-items: flex-start;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  overflow-x: auto; /* Allow horizontal scrolling if needed */
+}
+
+.graphical-flow h3 {
+  margin-bottom: 0.5vw;
+  text-align: Left;
+}
+
+
+
+.flow-row-label {
+  font-weight: bold;
+  margin-top: 0.1vw;
+  margin-bottom: 0.1vw;
+  font-size: 0.7vw; /* Smaller font size for Human and Robot labels */
+  overflow: hidden;
+}
+
+.flow-row {
+  display: flex;
+  flex-direction: row;
+  gap: 0.08vw; /* Even smaller gap */
+  min-height: 3.2vw;
+  margin-bottom: 0;
+  overflow: hidden;
+  width: fit-content; /* Allow row to fit content */
+  flex-wrap: nowrap; /* Prevent wrapping */
+}
+
+.task-box {
+  width: 3.1vw; /* Bigger width */
+  height: 1.4vw; /* Bigger height */
+  min-height: 2vw;
+  min-width: 3.0vw; /* Ensure minimum width */
+  border-radius: 0.15vw;    
+  padding: 0.1vw 0.12vw; /* More padding */
+  text-align: center;
+  font-size: 0.7vw; /* Bigger font */         
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 0.1vw solid #ddd; /* Better border */
+  box-shadow: 0.1vw 0.1vw 0.15vw rgba(0, 0, 0, 0.15); /* Enhanced shadow */
+  margin-right: 0.1vw;
+  margin-left: 0.2vw;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+/* Human Tasks */
+.task-box.future-task {
+  background-color: #fff9c4;
+  color: #000;
+  border-color: #ffd54f;
+}
+
+.task-box.current-task {
+  background-color: #fdd835;
+  color: #000;
+  border-color: #ddd; /* Remove red border, use standard border */
+}
+
+.task-box.completed-task {
+  background-color: #388e3c;
+  color: white;
+  border-color: #2e7d32;
+}
+
+/* Robot Tasks */
+.task-box.robot-future {
+  background-color: #d0e7ff;
+  color: #000;
+  border-color: #64b5f6;
+}
+
+.task-box.robot-current {
+  background-color: #0056b3;
+  color: white;
+  border-color: #1976d2;
+}
+
+.task-box.robot-done {
+  background-color: #00cc66;
+  color: white;
+  border-color: #00a854;
+}
+
+/* Placeholder */
+.task-box.placeholder {
+  width: 3.1vw; /* Bigger width to match */
+  min-height: 2vw; /* Match the new height */
+  min-width: 3vw; /* Ensure minimum width */
+  background-color: transparent;
+  border: 0.1vw solid #e0e0e0; /* Lighter border for placeholders */
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+/* Dependency Group Container (spans both rows) */
+.dependency-group-container {
+  display: flex;
+  flex-direction: column;
+  border: 2px solid #ff6b6b;
+  border-radius: 0.3vw;
+  background-color: #fff5f5;
+  margin-bottom: 0.3vw; /* Smaller margin */
+  margin-right: 0.2vw; /* Add right margin for horizontal spacing */
+  overflow: hidden; /* Keep overflow hidden */
+  width: fit-content; /* Allow containers to size to content */
+  align-items: stretch; /* Ensure full width */
+  flex-shrink: 0; /* Prevent shrinking */
+  min-width: fit-content; /* Ensure minimum width fits content */
+  max-width: 20vw; /* Limit maximum width to force horizontal layout */
+}
+
+/* Remove drag handles from Graphical task sequence */
+.graphical-flow .dependency-group-container::before,
+.graphical-flow .independent-task-container::before {
+  display: none;
+}
+
+.dependency-group-header {
+  background-color: #ff6b6b;
+  padding: 0.1vw;
+  text-align: center;
+  width: 100%; /* Ensure header spans full width */
+}
+
+.dependency-group-label {
+  font-size: 0.6vw;
+  font-weight: bold;
+  color: white;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.dependency-group-content {
+  padding: 0.1vw; /* Smaller padding */
+  width: fit-content; /* Allow content to size to its children */
+  min-width: fit-content; /* Ensure minimum width fits content */
+}
+
+.dependency-group-content .flow-row {
+  margin-bottom: 0.5vw; /* Even bigger gap between Human and Robot rows */
+}
+
+.dependency-group-content .flow-row:last-child {
+  margin-bottom: 0;
+}
+
+.dependency-group-content .task-box {
+  margin: 0.06vw;
+  border: 1px solid #ddd;
+  background-color: white;
+}
+
+/* Ensure color classes work inside dependency groups */
+.dependency-group-content .task-box.future-task {
+  background-color: #fff9c4 !important;
+  color: #000 !important;
+}
+
+.dependency-group-content .task-box.current-task {
+  background-color: #fdd835 !important;
+  color: #000 !important;
+}
+
+.dependency-group-content .task-box.completed-task {
+  background-color: #388e3c !important;
+  color: white !important;
+}
+
+.dependency-group-content .task-box.robot-future {
+  background-color: #d0e7ff !important;
+  color: #000 !important;
+}
+
+.dependency-group-content .task-box.robot-current {
+  background-color: #0056b3 !important;
+  color: white !important;
+}
+
+.dependency-group-content .task-box.robot-done {
+  background-color: #00cc66 !important;
+  color: white !important;
+}
+
+
+
+
