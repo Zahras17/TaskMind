@@ -14,3 +14,4 @@ npm start
 
 it will run in a new browser: http://localhost:3000/
 
+ignore frontend-simplified
