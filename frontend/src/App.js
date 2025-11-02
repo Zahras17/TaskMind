@@ -33,8 +33,13 @@ function App() {
   const [robotExecutionMessage, setRobotExecutionMessage] = useState("");
   const [currentTaskBlocked, setCurrentTaskBlocked] = useState(false);
   const [blockedTaskMessage, setBlockedTaskMessage] = useState("");
+  const [currentTaskOrder, setCurrentTaskOrder] = useState([]);
+  const [currentBlockOrder, setCurrentBlockOrder] = useState([]);
+  const [taskBlockMapping, setTaskBlockMapping] = useState({});
+  const [savedBlockOrder, setSavedBlockOrder] = useState([]);
 
   const [isInitializingRobot, setIsInitializingRobot] = useState(false);
+  const [robotInitialized, setRobotInitialized] = useState(false);
   const [finishedTasks, setFinishedTasks] = useState({
     human_finished: [],
     robot_finished: [],
@@ -72,6 +77,27 @@ function App() {
     { question: "√49 = ?", answer: "7" },
     { question: "17 × 3 = ?", answer: "51" },
     { question: "15 + 74 - 3 = ?", answer: "86" },
+    { question: "18 × 6 = ?", answer: "108" },
+    { question: "64 ÷ 8 = ?", answer: "8" },
+    { question: "48 ÷ 12 = ?", answer: "4" },
+    { question: "23 + 17 - 5 = ?", answer: "35" },
+    { question: "52 + 19 - 8 = ?", answer: "63" },
+    { question: "√81 = ?", answer: "9" },
+    { question: "29 × 4 = ?", answer: "116" },
+    { question: "36 ÷ 6 = ?", answer: "6" },
+    { question: "14 × 7 = ?", answer: "98" },
+    { question: "88 - 45 + 12 = ?", answer: "55" },
+    { question: "95 - 36 + 7 = ?", answer: "66" },
+    { question: "√100 = ?", answer: "10" },
+    { question: "27 × 5 = ?", answer: "135" },
+    { question: "56 ÷ 7 = ?", answer: "8" },
+    { question: "12 × 12 = ?", answer: "144" },
+    { question: "42 + 18 - 20 = ?", answer: "40" },
+    { question: "63 ÷ 3 = ?", answer: "21" },
+    { question: "16 × 9 = ?", answer: "144" },
+    { question: "√49 = ?", answer: "7" },
+    { question: "25 + 36 - 14 = ?", answer: "47" },
+
   ], []);
 
   const logEvent = useCallback(async (event, details = {}) => {
@@ -143,6 +169,7 @@ function App() {
       
       if (response.data.status === "success") {
         setRobotMessage(`✅ Robot initialized with ${response.data.task_type} position`);
+        setRobotInitialized(true);
       } else {
         setRobotMessage(`❌ Failed to initialize robot: ${response.data.message}`);
       }
@@ -157,6 +184,49 @@ function App() {
     }
   };
 
+
+  const handleTaskOrderChange = (newOrder, blockOrder) => {
+    setCurrentTaskOrder(newOrder);
+    setCurrentBlockOrder(blockOrder);
+    
+    // Create a mapping of task names to their block names
+    const mapping = {};
+    blockOrder.forEach(block => {
+      block.tasks.forEach(taskName => {
+        mapping[taskName] = block.name;
+      });
+    });
+    setTaskBlockMapping(mapping);
+    
+    console.log("🔍 Task order changed in App.js:", newOrder.map(t => t.name));
+    console.log("🔍 Block order changed in App.js:", blockOrder.map(b => b.name));
+    console.log("🔍 Task to block mapping:", mapping);
+  };
+
+  // Helper function to find which block a task belongs to
+  const findTaskBlock = (taskName) => {
+    // Use the mapping created from the TaskSequenceView component
+    return taskBlockMapping[taskName] || taskName;
+  };
+
+  // Helper function to find which block a task belongs to based on task name
+  const findTaskBlockFromName = (taskName) => {
+    const taskNameLower = taskName.toLowerCase();
+    
+    // Map task names to their block names based on the actual task names from Excel
+    if (taskNameLower.includes('hospital')) return 'Hospital';
+    if (taskNameLower.includes('bridge')) return 'Bridge';
+    if (taskNameLower.includes('snap')) return 'Snap';
+    if (taskNameLower.includes('dovetail')) return 'Dovetail';
+    if (taskNameLower.includes('wheel')) return 'Wheel';
+    if (taskNameLower.includes('triangle')) return 'Triangle';
+    if (taskNameLower.includes('museum')) return 'Museum';
+    if (taskNameLower.includes('inspection')) return 'Inspection';
+    
+    // Default to task name if no match found
+    console.warn(`⚠️ No block mapping found for task: ${taskName}`);
+    return taskName;
+  };
 
   const allTasksAssigned = tasks.every(
     (task) => task.assignedTo === "Human" || task.assignedTo === "Robot"
@@ -375,6 +445,7 @@ function App() {
     setRobotPaused(false);
     setRobotFinished(false);
     setRobotMessage("");
+    setRobotInitialized(false);
     setCurrentTaskBlocked(false);
     setBlockedTaskMessage("");
     setStartPressed(false);
@@ -428,6 +499,32 @@ function App() {
   }, []); // Empty dependency array - only run once on mount
 
   const questionTimeoutRef = useRef(null);
+  const QUESTION_INTERVAL_MS = 20 * 1000; // 20 seconds
+
+  // Play a short beep when the question popup appears
+  const playBeep = useCallback(() => {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const audioCtx = new AudioContextClass();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+      gainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.2, audioCtx.currentTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.2); // ~200ms beep
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.22);
+      oscillator.onended = () => {
+        try { audioCtx.close(); } catch (e) { /* noop */ }
+      };
+    } catch (e) {
+      // Silently ignore if audio is blocked
+      console.warn('Beep sound could not be played:', e);
+    }
+  }, []);
 
   const showQuestion = useCallback(() => {
     console.log("showQuestion called - showing popup");
@@ -435,8 +532,9 @@ function App() {
     setCurrentTask(randomTask);
     setUserAnswer("");
     setShowTaskPopup(true);
+    playBeep();
     logEvent("Question Popup Shown", { question: randomTask.question });
-  }, [logEvent, secondaryTasks]);
+  }, [logEvent, secondaryTasks, playBeep]);
 
 
 
@@ -513,7 +611,7 @@ function App() {
     questionTimeoutRef.current = setTimeout(() => {
       console.log("Question timer expired - calling showQuestion");
       showQuestion();
-    }, 15000); // first question after 15 seconds
+    }, QUESTION_INTERVAL_MS); // show question every 20 minutes
   }, [showQuestion]);
 
   // Function to stop the question timer
@@ -568,6 +666,29 @@ function App() {
       setStartTime(now);
       setIsRobotRunning(true);
       setRobotStarted(true);
+
+      // Save participant task order if in yellow mode
+      if (taskMode === "First: Yellow") {
+        // Use currentBlockOrder if available, otherwise fall back to tasks
+        const orderToSave = currentBlockOrder.length > 0 ? currentBlockOrder : tasks;
+        
+        // Log the exact block order being saved
+        console.log("🔍 Saving block order for participant:", participantId);
+        console.log("🔍 Current block order state:", currentBlockOrder.map(b => b.name));
+        console.log("🔍 Block order being saved:", orderToSave.map(b => b.name || b.name));
+        
+        axios.post("http://127.0.0.1:8000/save-participant-order", {
+          participantId: participantId,
+          blockOrder: orderToSave,
+          taskMode: taskMode
+        })
+        .then((res) => {
+          console.log("✅ Participant block order saved:", res.data);
+        })
+        .catch((err) => {
+          console.error("❌ Failed to save participant block order:", err);
+        });
+      }
 
       // Start execution with current task assignments
       axios.post("http://127.0.0.1:8000/start-execution", tasks)
@@ -720,6 +841,7 @@ function App() {
     setFinished(false);
     setIsRobotRunning(false);
     setRobotStarted(false);
+    setRobotInitialized(false);
     setCurrentTaskBlocked(false);
     setBlockedTaskMessage("");
     const last = localStorage.getItem("lastTaskOrder");
@@ -757,18 +879,22 @@ function App() {
 
     // Note: Popup functionality removed - was for Yellow + Question mode
 
-    // If Orange is selected, load previous allocations
+    // If Orange is selected, load previous allocations and task order
     if (taskMode === "Second: Orange") {
       try {
-        const response = await axios.get("http://localhost:8000/previous-allocation");
-        const previousAllocations = response.data;
+        // Load previous allocations
+        const allocationResponse = await axios.get("http://localhost:8000/previous-allocation");
+        const previousAllocations = allocationResponse.data;
+        
+        console.log("🔍 Previous allocation API response:", allocationResponse.data);
+        console.log("🔍 Previous allocations count:", previousAllocations.length);
 
         if (previousAllocations.length === 0) {
           console.warn("⚠️ No previous allocation found.");
           alert("No previous allocation found!");
         } else {
-          console.log("Loaded previous allocation:", previousAllocations);
-          const updatedTasks = tasks.map(task => {
+          console.log("✅ Loaded previous allocation:", previousAllocations);
+          let updatedTasks = tasks.map(task => {
             const match = previousAllocations.find(
               t => t.name.trim().toLowerCase() === task.name.trim().toLowerCase()
             );
@@ -781,7 +907,11 @@ function App() {
             }
             return task;
           });
-          setTasks(updatedTasks);
+          // For Orange mode: keep the initial order, do not load/apply Yellow block order
+          // Clear any previously saved block order so UI preserves current order
+          setSavedBlockOrder([]);
+          console.log("Keeping initial task order for Orange mode.");
+          setTasks([...updatedTasks]);
           logEvent("Previous Allocation Loaded", { previousAllocations });
         }
       } catch (error) {
@@ -824,6 +954,7 @@ function App() {
               allTasksAssigned={allTasksAssigned}
               startRobot={startRobot}
               startPressed={startPressed}
+              robotInitialized={robotInitialized}
             />
             <GraphicalTaskSequence
               tasks={tasks}
@@ -849,6 +980,8 @@ function App() {
                 totalTasks={humanTasks.length}
                 isBlocked={currentTaskBlocked}
                 blockedMessage={blockedTaskMessage}
+                robotInitialized={robotInitialized}
+                startPressed={startPressed}
               />
             </div>
             <div className="robot-communicator-column">
@@ -891,6 +1024,8 @@ function App() {
             updateTaskRole={updateTaskRole}
             editable={applied && !robotStarted}
             robotStarted={robotStarted}
+            onOrderChange={handleTaskOrderChange}
+            savedBlockOrder={savedBlockOrder}
           />
             
 

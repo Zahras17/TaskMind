@@ -2,7 +2,7 @@ import socket
 import time
 import math
 
-ROBOT_IP = "192.168.1.10"  # Robot IP address
+ROBOT_IP = "192.168.1.15"  # Robot IP address
 DASHBOARD_PORT = 29999
 CONTROL_PORT = 30002  # Port for sending joint positions
 

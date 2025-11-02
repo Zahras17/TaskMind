@@ -1,8 +1,8 @@
 import React from "react";
 import "./RobotCommunicator.css";
 
-const RobotCommunicator = ({ message, robotExecutionMessage }) => {
-  console.log("🔍 RobotCommunicator props:", { message, robotExecutionMessage });
+const RobotCommunicator = ({ message, robotExecutionMessage, currentRobotTaskImage }) => {
+  console.log("🔍 RobotCommunicator props:", { message, robotExecutionMessage, currentRobotTaskImage });
   const isNotification = message && (message.includes("⚠️") || message.includes("🤖") || message.includes("✅ All dependencies are met"));
   const isRobotInitialized = message && message.includes("Robot initialized");
   const isInitializing = message && message.includes("Initializing robot");
@@ -17,7 +17,11 @@ const RobotCommunicator = ({ message, robotExecutionMessage }) => {
           {isNotification && <div className="notification-icon"></div>}
         </div>
         <div className="robot-image">
-          <img src="/UR3e.png" alt="UR3e Robot" />
+          {currentRobotTaskImage ? (
+            <img src={`/${currentRobotTaskImage}`} alt="Current Robot Task" />
+          ) : (
+            <img src="/UR3e.png" alt="UR3e Robot" />
+          )}
         </div>
         <div className="robot-execution-status">
           <p>{robotExecutionMessage || "Robot idle."}</p>

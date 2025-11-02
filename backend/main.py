@@ -391,6 +391,24 @@ async def robot_state():
     except Exception as e:
         return {"state": "UNKNOWN", "error": str(e)}
 
+@app.get("/robot/debug-state")
+async def robot_debug_state():
+    """Debug endpoint to check robot state details"""
+    if ROBOT_CONNECTED:
+        state = robot_executor.get_state()
+        state["debug_info"] = {
+            "queue_cleared": len(robot_executor.queue) == 0,
+            "executed_tasks_cleared": len(robot_executor.executed_tasks) == 0,
+            "current_task_none": robot_executor.current_task is None,
+            "is_running_false": not robot_executor.is_running,
+            "started_false": not robot_executor.started,
+            "all_tasks_completed_false": not robot_executor.all_tasks_completed,
+            "orange_mode_false": not robot_executor.orange_mode
+        }
+        return state
+    else:
+        return {"state": "SIMULATED", "debug_info": "Robot not connected"}
+
 @app.get("/robot/current_task")
 async def get_current_robot_task():
     if ROBOT_CONNECTED:
@@ -460,6 +478,46 @@ async def get_robot_execution_state():
             "queued_tasks": []
         }
 
+@app.get("/robot/current-task-image")
+async def get_current_robot_task_image():
+    """Get the image name for the current robot task from Excel"""
+    if ROBOT_CONNECTED:
+        try:
+            df = pd.read_excel("tasks.xlsx")
+            current_task_name = robot_executor.get_current_task_name()
+            
+            if current_task_name:
+                # Find the row with matching task name
+                for _, row in df.iterrows():
+                    if str(row["TaskName"]).strip() == current_task_name:
+                        # Get ImageNameRobot if it exists, otherwise fallback to ImageName
+                        image_name = row.get("ImageNameRobot", row.get("ImageName", "UR3e.png"))
+                        return {
+                            "task_name": current_task_name,
+                            "image_name": image_name,
+                            "has_image": True
+                        }
+            
+            return {
+                "task_name": current_task_name,
+                "image_name": "UR3e.png",
+                "has_image": False
+            }
+        except Exception as e:
+            print(f"❌ Error getting robot task image: {e}")
+            return {
+                "task_name": robot_executor.get_current_task_name(),
+                "image_name": "UR3e.png",
+                "has_image": False,
+                "error": str(e)
+            }
+    else:
+        return {
+            "task_name": "SIMULATED_TASK",
+            "image_name": "UR3e.png",
+            "has_image": False
+        }
+
 @app.post("/robot/reset")
 async def reset_robot_state():
     if ROBOT_CONNECTED:
@@ -474,6 +532,15 @@ async def reset_dependencies():
     """Reset only the dependency manager (finished task lists)"""
     dependency_manager.reset()
     return {"status": "success", "detail": "Dependency manager reset"}
+
+@app.post("/robot/reset-pause-waiting")
+async def reset_pause_waiting():
+    """Reset the pause waiting time logic"""
+    if ROBOT_CONNECTED:
+        robot_executor.pause_reset_flag = True
+        return {"status": "success", "detail": "Pause waiting time reset flag set"}
+    else:
+        return {"status": "bypassed", "detail": "Pause waiting time reset simulated"}
 
 
 
@@ -494,36 +561,71 @@ class SaveRequest(BaseModel):
 
 @app.get("/participant-count")
 def participant_count():
-    if not os.path.exists(SAVE_PATH):
+    try:
+        # Check if log file exists
+        if not os.path.exists(LOG_FILE):
+            return {"count": 0}
+        
+        # Read the log file to get unique participant IDs
+        df = pd.read_excel(LOG_FILE)
+        
+        if df.empty:
+            return {"count": 0}
+        
+        # Get unique participant IDs (excluding header)
+        unique_participants = df['Participant ID'].dropna().unique()
+        
+        # Filter out non-participant entries (like "Robot")
+        valid_participants = [p for p in unique_participants if str(p).startswith('P') and str(p)[1:].isdigit()]
+        
+        # Get the highest participant number
+        if valid_participants:
+            participant_numbers = [int(str(p)[1:]) for p in valid_participants]
+            max_number = max(participant_numbers)
+            print(f"🔍 Debug: Found participants: {valid_participants}, max number: {max_number}")
+            return {"count": max_number}
+        else:
+            return {"count": 0}
+            
+    except Exception as e:
+        print(f"❌ Error getting participant count: {e}")
         return {"count": 0}
-    wb = load_workbook(SAVE_PATH)
-    ws = wb.active
-    return {"count": ws.max_row - 1}  # Exclude header
 
 
 @app.get("/previous-allocation")
 def get_previous_allocation():
     try:
+        print(f"🔍 Loading previous allocation from: {SAVE_PATH}")
+        
         if not os.path.exists(SAVE_PATH):
+            print(f"❌ File not found: {SAVE_PATH}")
             raise HTTPException(status_code=404, detail="participant_data.xlsx not found")
 
         df = pd.read_excel(SAVE_PATH)
+        print(f"🔍 Excel file loaded, shape: {df.shape}")
+        print(f"🔍 Columns: {list(df.columns)}")
 
         if df.empty or len(df.columns) <= 3:
+            print(f"❌ No valid data found. Empty: {df.empty}, Columns: {len(df.columns)}")
             raise HTTPException(status_code=404, detail="No valid previous allocations found")
 
         last_row = df.iloc[-1]
+        print(f"🔍 Last row data: {last_row.to_dict()}")
         tasks = []
 
-        for col in df.columns[0:]:  # Skip the first 4 columns
+        # Only iterate over task columns. The first 4 columns are metadata:
+        # ["Participant ID", "Allocation Time", "Start Time", "Finish Time"]
+        for col in df.columns[4:]:
             try:
                 value = float(last_row[col])
                 if not (0 <= value <= 10):  # Ensure it's within slider range
                     value = 5  # Default if invalid
                 assigned_to = "Human" if value <= 5 else "Robot"
+                print(f"🔍 Task: {col}, Value: {value}, Assigned: {assigned_to}")
             except (ValueError, TypeError):
                 value = 5
                 assigned_to = "Unassigned"
+                print(f"🔍 Task: {col}, Invalid value, using default")
 
             tasks.append({
                 "name": col,
@@ -536,6 +638,7 @@ def get_previous_allocation():
             if t["sliderValue"] is None or t["sliderValue"] != t["sliderValue"]:  # Check NaN
                 t["sliderValue"] = 5
 
+        print(f"✅ Loaded {len(tasks)} tasks from previous allocation")
         return tasks
 
     except HTTPException as e:
@@ -686,6 +789,156 @@ def log_event(data: LogEvent):
             print("❌ Error logging event:", e)
             raise HTTPException(status_code=500, detail=f"Failed to log event: {e}")
 
+@app.post("/save-participant-order")
+def save_participant_order(data: dict):
+    """Save participant block order to Excel file"""
+    from openpyxl import Workbook, load_workbook
+    
+    try:
+        participant_id = data.get("participantId")
+        block_order = data.get("blockOrder", [])
+        task_mode = data.get("taskMode", "")
+        
+        # Debug logging
+        print(f"🔍 Backend received save request:")
+        print(f"   Participant ID: {participant_id}")
+        print(f"   Task mode: {task_mode}")
+        print(f"   Number of blocks: {len(block_order)}")
+        print(f"   Block order received: {[b.get('name', '') for b in block_order]}")
+        
+        # Only save if it's yellow mode
+        if task_mode != "First: Yellow":
+            return {"status": "skipped", "reason": "Not yellow mode"}
+        
+        filename = "Participant_order.xlsx"
+        
+        # Create file if it doesn't exist
+        if not os.path.exists(filename):
+            wb = Workbook()
+            ws = wb.active
+            ws.append(["Participant ID", "Mode"] + [f"Block_{i+1}" for i in range(8)])  # Support up to 8 blocks
+            wb.save(filename)
+            wb.close()
+        
+        # Open existing file
+        wb = load_workbook(filename)
+        ws = wb.active
+        
+        # Create row data: participant ID + mode + block names
+        row_data = [participant_id, "Yellow"]  # Add "Yellow" mode in second column
+        for block in block_order:
+            row_data.append(block.get("name", ""))
+        
+        # Pad with empty cells if needed
+        while len(row_data) < 10:  # 1 for participant ID + 1 for mode + 8 for blocks
+            row_data.append("")
+        
+        print(f"🔍 Row data being written to Excel: {row_data}")
+        
+        ws.append(row_data)
+        wb.save(filename)
+        wb.close()
+        
+        print(f"✅ Saved participant block order for {participant_id}: {[b.get('name', '') for b in block_order]}")
+        return {"status": "saved", "participant_id": participant_id, "block_count": len(block_order)}
+        
+    except Exception as e:
+        print(f"❌ Error saving participant block order: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save participant block order: {e}")
+
+@app.get("/get-most-recent-participant")
+def get_most_recent_participant():
+    """Get the most recent participant ID from the Participant_order.xlsx file"""
+    from openpyxl import load_workbook
+    
+    try:
+        filename = "Participant_order.xlsx"
+        
+        if not os.path.exists(filename):
+            raise HTTPException(status_code=404, detail="Participant order file not found")
+        
+        # Open existing file
+        wb = load_workbook(filename)
+        ws = wb.active
+        
+        # Find the last row with data (most recent participant)
+        last_row = ws.max_row
+        while last_row > 1:  # Skip header row
+            participant_id = ws.cell(row=last_row, column=1).value
+            if participant_id and str(participant_id).strip():
+                wb.close()
+                return {"participant_id": str(participant_id).strip()}
+            last_row -= 1
+        
+        wb.close()
+        raise HTTPException(status_code=404, detail="No participant data found")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error getting most recent participant: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get most recent participant: {e}")
+
+@app.get("/load-participant-order/{participant_id}")
+def load_participant_order(participant_id: str):
+    """Load participant block order from Excel file - finds the last Yellow mode row"""
+    from openpyxl import load_workbook
+    
+    try:
+        filename = "Participant_order.xlsx"
+        
+        print(f"🔍 Loading block order from last Yellow mode row (ignoring participant_id: {participant_id})")
+        print(f"🔍 Looking for file: {filename}")
+        
+        if not os.path.exists(filename):
+            print(f"❌ File not found: {filename}")
+            raise HTTPException(status_code=404, detail="Participant order file not found")
+        
+        # Open existing file
+        wb = load_workbook(filename)
+        ws = wb.active
+        
+        print(f"🔍 Excel file opened, max row: {ws.max_row}, max column: {ws.max_column}")
+        
+        # Find the last row with "Yellow" mode in the second column
+        participant_row = None
+        for row_num in range(ws.max_row, 1, -1):  # Start from last row and go backwards, skip header
+            row = list(ws.iter_rows(min_row=row_num, max_row=row_num, values_only=True))[0]
+            print(f"🔍 Checking row {row_num}: {row}")
+            
+            # Check if the second column (index 1) contains "Yellow"
+            if len(row) > 1 and row[1] == "Yellow":
+                participant_row = row
+                print(f"✅ Found Yellow mode row: {participant_row}")
+                break
+        
+        if participant_row is None:
+            print(f"❌ No Yellow mode row found in Excel file")
+            raise HTTPException(status_code=404, detail="No Yellow mode data found")
+        
+        # Extract block names (skip first two columns: participant ID and mode)
+        block_names = []
+        print(f"🔍 Extracting block names from row: {participant_row}")
+        for i in range(2, len(participant_row)):  # Start from index 2 to skip participant ID and mode
+            cell_value = participant_row[i]
+            print(f"🔍 Column {i}: '{cell_value}'")
+            if cell_value and str(cell_value).strip():  # Check if cell is not empty
+                block_names.append(str(cell_value).strip())
+            else:
+                print(f"🔍 Empty cell at column {i}, stopping extraction")
+                break  # Stop at first empty cell
+        
+        wb.close()
+        
+        print(f"✅ Loaded block order from Yellow mode: {block_names}")
+        return {"status": "loaded", "participant_id": participant_id, "block_order": block_names}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error loading participant block order: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to load participant block order: {e}")
+
 @app.post("/robot/set_mode")
 async def set_robot_mode(mode: str = Body(..., embed=True)):
     if mode.lower() == "orange":
@@ -703,6 +956,12 @@ async def start_robot_tasks(request: Request):
     data = await request.json()
     tasks = data.get("tasks", [])
     robot_tasks = [t for t in tasks if t.get("assignedTo") == "Robot"]
+
+    print(f"🔍 Debug - Starting robot tasks")
+    print(f"🔍 Debug - Total tasks received: {len(tasks)}")
+    print(f"🔍 Debug - Robot tasks found: {len(robot_tasks)}")
+    print(f"🔍 Debug - Robot tasks: {[t.get('name', 'Unknown') for t in robot_tasks]}")
+    print(f"🔍 Debug - Robot codes: {[t.get('RobotCode', 'Unknown') for t in robot_tasks]}")
 
     for task in robot_tasks:
         robot_executor.add_task(task["RobotCode"])

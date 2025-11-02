@@ -17,7 +17,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import "./TaskSequenceView.css";
 
-function SortableTask({ task, updateTaskRole, editable }) {
+function SortableTask({ task, updateTaskRole, editable, isLastTask }) {
   const getColorClass = () => {
     if (task.assignedTo === "Human") return "human";
     if (task.assignedTo === "Robot") return "robot";
@@ -37,11 +37,12 @@ function SortableTask({ task, updateTaskRole, editable }) {
   };
 
   return (
-    <div className={`task-card ${getColorClass()}`}>
+    <div className={`task-card ${getColorClass()} ${isLastTask ? 'last-task-card' : ''}`}>
       <div className="task-inline">
         <span className="task-name">
           Task {task.id}: {task.name}
           {task.fixedToHuman && <span className="lock-icon">🔒</span>}
+
         </span>
         <div className="slider-inline">
           <label>human</label>
@@ -52,7 +53,7 @@ function SortableTask({ task, updateTaskRole, editable }) {
             step="1"
             value={getSliderValue()}
             onChange={handleChange}
-            disabled={!editable ||task.fixedToHuman}
+            disabled={!editable || task.fixedToHuman || isLastTask}
           />
           <label>robot</label>
           <span style={{ marginLeft: "0.2vw" }}>{getSliderValue()}</span>
@@ -62,7 +63,7 @@ function SortableTask({ task, updateTaskRole, editable }) {
   );
 }
 
-function SortableDependencyGroup({ group, tasks, updateTaskRole, editable, groupNames }) {
+function SortableDependencyGroup({ group, tasks, updateTaskRole, editable, groupNames, isLastTask }) {
   const {
     attributes,
     listeners,
@@ -70,7 +71,10 @@ function SortableDependencyGroup({ group, tasks, updateTaskRole, editable, group
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: `group-${group.join('-')}` });
+  } = useSortable({ 
+    id: `group-${group.join('-')}`,
+    disabled: isLastTask // Disable dragging for the last task
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -85,9 +89,9 @@ function SortableDependencyGroup({ group, tasks, updateTaskRole, editable, group
   return (
     <div
       ref={setNodeRef}
-      className="dependency-group-container"
-      {...attributes}
-      {...listeners}
+      className={`dependency-group-container ${isLastTask ? 'last-task-fixed' : ''}`}
+      {...(isLastTask ? {} : attributes)}
+      {...(isLastTask ? {} : listeners)}
       style={style}
       data-dragging={isDragging}
     >
@@ -103,6 +107,7 @@ function SortableDependencyGroup({ group, tasks, updateTaskRole, editable, group
             task={task}
             updateTaskRole={updateTaskRole}
             editable={editable}
+            isLastTask={isLastTask}
           />
         ))}
       </div>
@@ -110,7 +115,7 @@ function SortableDependencyGroup({ group, tasks, updateTaskRole, editable, group
   );
 }
 
-function SortableIndependentTask({ task, updateTaskRole, editable, groupNames }) {
+function SortableIndependentTask({ task, updateTaskRole, editable, groupNames, isLastTask }) {
   const {
     attributes,
     listeners,
@@ -118,7 +123,10 @@ function SortableIndependentTask({ task, updateTaskRole, editable, groupNames })
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: `task-${task.id}` });
+  } = useSortable({ 
+    id: `task-${task.id}`,
+    disabled: isLastTask // Disable dragging for the last task
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -130,9 +138,9 @@ function SortableIndependentTask({ task, updateTaskRole, editable, groupNames })
   return (
     <div
       ref={setNodeRef}
-      className="independent-task-container"
-      {...attributes}
-      {...listeners}
+      className={`independent-task-container ${isLastTask ? 'last-task-fixed' : ''}`}
+      {...(isLastTask ? {} : attributes)}
+      {...(isLastTask ? {} : listeners)}
       style={style}
       data-dragging={isDragging}
     >
@@ -146,13 +154,14 @@ function SortableIndependentTask({ task, updateTaskRole, editable, groupNames })
           task={task}
           updateTaskRole={updateTaskRole}
           editable={editable}
+          isLastTask={isLastTask}
         />
       </div>
     </div>
   );
 }
 
-function TaskSequenceView({ tasks, setTasks, updateTaskRole, editable, robotStarted }) {
+function TaskSequenceView({ tasks, setTasks, updateTaskRole, editable, robotStarted, onOrderChange, savedBlockOrder }) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -197,8 +206,9 @@ function TaskSequenceView({ tasks, setTasks, updateTaskRole, editable, robotStar
       }
     };
     
-    // Find groups for each unvisited task
-    tasks.forEach(task => {
+    // Find groups for each unvisited task, in the order they appear in the tasks array
+    for (let i = 0; i < tasks.length; i++) {
+      const task = tasks[i];
       if (!visited.has(task.name)) {
         const group = [];
         findConnectedTasks(task.name, group);
@@ -206,13 +216,18 @@ function TaskSequenceView({ tasks, setTasks, updateTaskRole, editable, robotStar
           groups.push([...new Set(group)]); // Remove duplicates
         }
       }
-    });
+    }
     
     return groups;
   };
 
   // Fetch dependencies and create unified sortable list
   useEffect(() => {
+    console.log("🔄 TaskSequenceView useEffect triggered");
+    console.log("TaskSequenceView received tasks:", tasks.map(t => ({ name: t.name, id: t.id })));
+    console.log("TaskSequenceView task order:", tasks.map(t => t.name));
+    console.log("TaskSequenceView savedBlockOrder:", savedBlockOrder);
+    
     const fetchDependencies = async () => {
       try {
         const response = await fetch('http://127.0.0.1:8000/get-task-dependencies');
@@ -241,7 +256,7 @@ function TaskSequenceView({ tasks, setTasks, updateTaskRole, editable, robotStar
         // Add dependent groups as blocks
         groups.forEach(group => {
           const groupTasks = tasks.filter(task => group.includes(task.name));
-          // Sort group tasks by their original order
+          // Sort group tasks by their current order in the tasks array
           groupTasks.sort((a, b) => {
             const indexA = tasks.findIndex(t => t.id === a.id);
             const indexB = tasks.findIndex(t => t.id === b.id);
@@ -264,8 +279,95 @@ function TaskSequenceView({ tasks, setTasks, updateTaskRole, editable, robotStar
           });
         });
         
-        // Sort blocks by their original order to maintain initial sequence
-        unifiedBlocks.sort((a, b) => a.originalOrder - b.originalOrder);
+        // Sort blocks by their current order in the tasks array
+        console.log('Before sorting - unified blocks:', unifiedBlocks.map(block => ({
+          type: block.type,
+          firstTask: block.tasks[0].name,
+          currentOrder: tasks.findIndex(t => t.id === block.tasks[0].id)
+        })));
+        
+        // Helper function to find block name from task name
+        const findBlockNameFromTask = (taskName) => {
+          const taskNameLower = taskName.toLowerCase();
+          if (taskNameLower.includes('hospital')) return 'Hospital';
+          if (taskNameLower.includes('bridge')) return 'Bridge';
+          if (taskNameLower.includes('snap')) return 'Snap';
+          if (taskNameLower.includes('dovetail')) return 'Dovetail';
+          if (taskNameLower.includes('wheel')) return 'Wheel';
+          if (taskNameLower.includes('triangle')) return 'Triangle';
+          if (taskNameLower.includes('museum')) return 'Museum';
+          if (taskNameLower.includes('inspection')) return 'Inspection';
+          return taskName;
+        };
+        
+        console.log('🔄 Starting block sorting...');
+        console.log('🔄 Saved block order available:', savedBlockOrder && savedBlockOrder.length > 0);
+        if (savedBlockOrder && savedBlockOrder.length > 0) {
+          console.log('🔄 Saved block order:', savedBlockOrder);
+        }
+        
+        unifiedBlocks.sort((a, b) => {
+          // If we have saved block order, use it to sort
+          if (savedBlockOrder && savedBlockOrder.length > 0) {
+            console.log("🔄 Using saved block order for sorting:", savedBlockOrder);
+            const aFirstTask = a.tasks[0];
+            const bFirstTask = b.tasks[0];
+            
+            // Prefer explicit group name from Excel mapping when available,
+            // fallback to heuristic mapping from task name
+            const aBlockName = (groupNames[aFirstTask.name] || findBlockNameFromTask(aFirstTask.name));
+            const bBlockName = (groupNames[bFirstTask.name] || findBlockNameFromTask(bFirstTask.name));
+            
+            console.log(`🔄 Comparing blocks: ${aBlockName} vs ${bBlockName}`);
+            
+            const aOrder = savedBlockOrder.findIndex(blockName => 
+              blockName.toLowerCase() === aBlockName.toLowerCase()
+            );
+            const bOrder = savedBlockOrder.findIndex(blockName => 
+              blockName.toLowerCase() === bBlockName.toLowerCase()
+            );
+            
+            console.log(`🔄 Block orders in saved list: ${aBlockName} at index ${aOrder}, ${bBlockName} at index ${bOrder}`);
+            
+            // If both blocks are found in saved order, sort by their order
+            if (aOrder !== -1 && bOrder !== -1) {
+              console.log(`Sorting by saved order: ${aBlockName} (${aOrder}) vs ${bBlockName} (${bOrder})`);
+              return aOrder - bOrder;
+            }
+            // If only one is found, prioritize the found one
+            else if (aOrder !== -1) {
+              console.log(`Prioritizing ${aBlockName} (found in saved order)`);
+              return -1;
+            }
+            else if (bOrder !== -1) {
+              console.log(`Prioritizing ${bBlockName} (found in saved order)`);
+              return 1;
+            }
+          }
+          
+          // Fallback to current order in tasks array
+          const aFirstTask = a.tasks[0];
+          const bFirstTask = b.tasks[0];
+          
+          const aCurrentOrder = tasks.findIndex(t => t.id === aFirstTask.id);
+          const bCurrentOrder = tasks.findIndex(t => t.id === bFirstTask.id);
+          
+          console.log(`Sorting by current order: ${aFirstTask.name} (${aCurrentOrder}) vs ${bFirstTask.name} (${bCurrentOrder})`);
+          
+          return aCurrentOrder - bCurrentOrder;
+        });
+        
+        console.log('After sorting - unified blocks:', unifiedBlocks.map(block => ({
+          type: block.type,
+          firstTask: block.tasks[0].name,
+          currentOrder: tasks.findIndex(t => t.id === block.tasks[0].id)
+        })));
+        
+        // Log the final block order for debugging
+        console.log('🔄 Final block order after sorting:', unifiedBlocks.map(block => {
+          const blockName = findBlockNameFromTask(block.tasks[0].name);
+          return blockName;
+        }));
         
         setAllSortableItems(unifiedBlocks);
         
@@ -273,15 +375,25 @@ function TaskSequenceView({ tasks, setTasks, updateTaskRole, editable, robotStar
         console.log('Unified blocks created:', unifiedBlocks.map(block => ({
           type: block.type,
           taskNames: block.tasks.map(t => t.name),
-          originalOrder: block.originalOrder
+          originalOrder: block.originalOrder,
+          currentOrder: tasks.findIndex(t => t.id === block.tasks[0].id)
         })));
+        
+        // Debug: Log the final block order
+        console.log('Final block order after sorting:', unifiedBlocks.map(block => {
+          if (block.type === 'group') {
+            return groupNames[block.tasks[0].name] || block.tasks[0].name;
+          } else {
+            return block.tasks[0].name;
+          }
+        }));
       } catch (error) {
         console.error('Failed to fetch dependencies:', error);
       }
     };
     
     fetchDependencies();
-  }, [tasks]);
+  }, [tasks, savedBlockOrder]);
 
   const handleDragEnd = (event) => {
     // Prevent dragging when robot has started
@@ -316,6 +428,18 @@ function TaskSequenceView({ tasks, setTasks, updateTaskRole, editable, robotStar
       }
     }
     
+    // Prevent reordering if the last task (Inspection) is being moved
+    if (oldIndex === allSortableItems.length - 1) {
+      console.log('❌ Cannot reorder the Inspection task - it must remain at the end');
+      return;
+    }
+    
+    // Prevent moving any task to the last position (where Inspection should be)
+    if (newIndex === allSortableItems.length - 1) {
+      console.log('❌ Cannot move task to the last position - Inspection task must remain at the end');
+      return;
+    }
+    
     if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
       const reorderedItems = arrayMove(allSortableItems, oldIndex, newIndex);
       setAllSortableItems(reorderedItems);
@@ -334,8 +458,40 @@ function TaskSequenceView({ tasks, setTasks, updateTaskRole, editable, robotStar
       // This will trigger a re-render of the GraphicalTaskFlow component
       setTasks(newTasksOrder);
       
+      // Notify parent component of order change with block information
+      if (onOrderChange) {
+        // Create block order information
+        const blockOrder = reorderedItems.map(item => {
+          if (item.type === 'group') {
+            // For dependency groups, use the group name or first task name
+            const groupName = groupNames[item.tasks[0].name] || item.tasks[0].name;
+            return {
+              type: 'group',
+              name: groupName,
+              tasks: item.tasks.map(t => t.name)
+            };
+          } else {
+            // For independent tasks, use the task name
+            return {
+              type: 'independent',
+              name: item.tasks[0].name,
+              tasks: [item.tasks[0].name]
+            };
+          }
+        });
+        
+        onOrderChange(newTasksOrder, blockOrder);
+      }
+      
       // Debug: Log the reordering
       console.log('Tasks reordered:', newTasksOrder.map(t => t.name));
+      console.log('Block order:', reorderedItems.map(item => {
+        if (item.type === 'group') {
+          return groupNames[item.tasks[0].name] || item.tasks[0].name;
+        } else {
+          return item.tasks[0].name;
+        }
+      }));
       console.log('New task order IDs:', newTasksOrder.map(t => t.id));
     }
   };
@@ -362,7 +518,7 @@ function TaskSequenceView({ tasks, setTasks, updateTaskRole, editable, robotStar
           marginBottom: "0.3vw",
           fontStyle: "italic"
         }}>
-          ⋮⋮ Drag and drop to reorder
+          ⋮⋮ Drag and drop to reorder (Inspection task is fixed at the end)
         </div>
       )}
       {!editable && robotStarted && (
@@ -395,7 +551,8 @@ function TaskSequenceView({ tasks, setTasks, updateTaskRole, editable, robotStar
           strategy={verticalListSortingStrategy}
         >
           {/* Render all sortable items */}
-          {allSortableItems.map((item) => {
+          {allSortableItems.map((item, index) => {
+            const isLastTask = index === allSortableItems.length - 1;
             if (item.type === 'group') {
               return (
                 <SortableDependencyGroup
@@ -405,6 +562,7 @@ function TaskSequenceView({ tasks, setTasks, updateTaskRole, editable, robotStar
                   updateTaskRole={updateTaskRole}
                   editable={editable}
                   groupNames={groupNames}
+                  isLastTask={isLastTask}
                 />
               );
             } else {
@@ -415,6 +573,7 @@ function TaskSequenceView({ tasks, setTasks, updateTaskRole, editable, robotStar
                   updateTaskRole={updateTaskRole}
                   editable={editable}
                   groupNames={groupNames}
+                  isLastTask={isLastTask}
                 />
               );
             }

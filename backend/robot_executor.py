@@ -24,6 +24,7 @@ class RobotExecutor:
         self.started = False  # Flag to control when robot starts processing tasks
         self.task_times = {}  # Cache for Time_Robot values
         self.execution_message = "Robot idle."  # Track execution-specific messages
+        self.pause_reset_flag = False  # Flag to reset pause waiting time
 
 
     def reset(self):
@@ -38,6 +39,9 @@ class RobotExecutor:
             self.robot_message = ""
             self.execution_message = "Robot idle."
             self.started = False
+            self.pause_reset_flag = True  # Set flag to reset pause waiting time
+            self.all_tasks_completed = False  # Reset completion flag
+            self.orange_mode = False  # Reset orange mode flag
         print("🔄 Robot executor fully reset.")
 
 
@@ -47,6 +51,9 @@ class RobotExecutor:
             self.all_tasks_completed = False
             print(f"🧾 Added task to queue: {urp_name}")
             print(f"🧾 Current Queue: {self.queue}")
+            print(f"🧾 Queue length: {len(self.queue)}")
+            print(f"🧾 Orange mode: {self.orange_mode}")
+            print(f"🧾 Started flag: {self.started}")
 
     def start_processing(self):
         """Start processing tasks (called when Start button is pressed)"""
@@ -124,6 +131,7 @@ class RobotExecutor:
                     self.current_task = urp_name
                     self.current_task_name = self.get_current_task_name()
                     self.last_activity_time = time.time()
+                    self.pause_reset_flag = False  # Clear reset flag for new task
 
                 print(f"[EXECUTOR] Starting task: {urp_name} (Task: {self.current_task_name})")
                 print(f"[QUEUE] Tasks remaining: {self.queue}")
@@ -272,6 +280,12 @@ class RobotExecutor:
         
         while time.time() - execution_start_time < max_wait_time:
             try:
+                # Check if pause reset flag is set (page refresh)
+                if self.pause_reset_flag:
+                    print(f"🔄 Pause waiting time reset due to page refresh for task '{urp_name}'")
+                    self.pause_reset_flag = False  # Reset the flag
+                    return False  # Exit the task execution
+                
                 # Check if robot processing has been paused
                 if not self.started:
                     if not was_paused:
@@ -286,6 +300,12 @@ class RobotExecutor:
                     
                     while not self.started:
                         time.sleep(0.5)
+                        
+                        # Check if pause reset flag is set (page refresh)
+                        if self.pause_reset_flag:
+                            print(f"🔄 Pause waiting time reset due to page refresh for task '{urp_name}'")
+                            self.pause_reset_flag = False  # Reset the flag
+                            return False  # Exit the task execution
                         
                         # Every 5 seconds, extend the max_wait_time
                         if time.time() - last_pause_check >= pause_check_interval:
@@ -397,7 +417,10 @@ class RobotExecutor:
             "current_task_name": self.current_task_name,
             "queue_length": len(self.queue),
             "executed_count": len(self.executed_tasks),
-            "started": self.started
+            "started": self.started,
+            "orange_mode": self.orange_mode,
+            "all_tasks_completed": self.all_tasks_completed,
+            "queue": self.queue
         }
 
 

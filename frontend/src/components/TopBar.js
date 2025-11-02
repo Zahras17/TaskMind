@@ -12,7 +12,8 @@ function TopBar({
   handleApplyToggles,
   allTasksAssigned,
   startRobot,
-  startPressed
+  startPressed,
+  robotInitialized
 }) {
   const applyDisabled = taskMode === "" || taskOrder === "";
 
@@ -148,9 +149,9 @@ function TopBar({
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
             <button
               onClick={startRobot}
-              disabled={!allTasksAssigned || !applied}
+              disabled={!allTasksAssigned || !applied || !robotInitialized}
               style={{
-                backgroundColor: (!allTasksAssigned || !applied)
+                backgroundColor: (!allTasksAssigned || !applied || !robotInitialized)
                   ? "gray"
                   : startPressed
                   ? "green"
@@ -159,7 +160,7 @@ function TopBar({
                 border: "none",
                 padding: "0.4vw 0.8vw",
                 borderRadius: "0.3vw",
-                cursor: (!allTasksAssigned || !applied) ? "not-allowed" : "pointer",
+                cursor: (!allTasksAssigned || !applied || !robotInitialized) ? "not-allowed" : "pointer",
                 fontWeight: "bold"
               }}
             >
@@ -168,6 +169,16 @@ function TopBar({
             {(!allTasksAssigned || !applied) && (
               <p style={{ color: "red", fontSize: "0.8vw", marginTop: "0.3vw" }}>
                 Prerequisits: Apply and Task Allocation
+              </p>
+            )}
+            {!robotInitialized && allTasksAssigned && applied && (
+              <p style={{ color: "red", fontSize: "0.8vw", marginTop: "0.3vw" }}>
+                Prerequisits: Initialize Robot
+              </p>
+            )}
+            {robotInitialized && !startPressed && (
+              <p style={{ color: "green", fontSize: "0.8vw", marginTop: "0.3vw", fontWeight: "bold" }}>
+                ✅ Robot Initialized
               </p>
             )}
           </div>

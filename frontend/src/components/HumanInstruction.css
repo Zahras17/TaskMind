@@ -68,7 +68,7 @@
 }
   
 .instruction-image img {
-    width: 15vw; 
+    width: 30vw; 
     max-height: 100%; 
     max-width: 100%;  
     object-fit: contain;                  /* 360px ≈ 25vw */

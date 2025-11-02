@@ -1,0 +1,176 @@
+.robot-communicator {
+  padding: 0.2vw;
+  font-size: 1rem;
+  background-color: #f9f9f9;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.robot-content-box {
+  background-color: #e8f4fd;
+  border: 0.1vw solid #2196f3;
+  border-radius: 0.8vw;
+  padding: 1.5vw;
+  margin-top: 0;
+  height: 19vw;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0.2vw 0.3vw rgba(33, 150, 243, 0.2);
+  justify-content: center;
+  position: relative; /* Required for absolute positioning of child elements */
+}
+
+.robot-content-box h3 {
+  margin: 0 0 0.5vw 0;
+  font-size: 1vw;
+  font-weight: bold;
+  color: #1976d2;
+  text-align: left;
+  position: absolute;
+  top: 1.5vw;
+}
+
+.robot-content-box p {
+  margin: 0 0 0.1vw 0;
+  font-weight: 500;
+  color: #1976d2;
+}
+
+.message-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5vw;
+  margin-top:9vw;
+  margin-bottom: 7vw;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+}
+
+.message-container.notification {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 0.4vw;
+  padding: 0.1vw;
+  margin-top: 9vw;
+  margin-bottom: 7vw;
+}
+
+.message-container.notification p {
+  color: #856404;
+  font-weight: 600;
+  font-size: 0.9vw;
+  margin: 1vw;
+  flex: 1;
+  text-align: left;
+}
+
+.message-container.robot-initialized {
+  background-color: #fff3cd; /* Same as notification background */
+  border: 2px solid #856404; /* Dark border for emphasis */
+  border-radius: 0.4vw;
+  padding: 0.1vw;
+  margin-top: 9vw;
+  margin-bottom: 7vw;
+}
+
+.message-container.robot-initialized p {
+  color: #856404; /* Same as notification text color */
+  font-weight: 600;
+  font-size: 0.9vw;
+  margin: 1vw;
+  flex: 1;
+  text-align: left;
+}
+
+.message-container.robot-initializing {
+  background-color: #fff3cd; /* Same as notification background */
+  border: 1px solid #ffeaa7;
+  border-radius: 0.4vw;
+  padding: 0.1vw;
+  margin-top: 9vw;
+  margin-bottom: 7vw;
+}
+
+.message-container.robot-initializing p {
+  color: #856404; /* Same as notification text color */
+  font-weight: 600;
+  font-size: 0.9vw;
+  margin: 1vw;
+  flex: 1;
+  text-align: left;
+}
+
+.notification-icon {
+  font-size: 1.5vw;
+  color: #f39c12;
+  margin-top: 0.1vw;
+}
+
+.robot-image {
+  align-self: flex-end;
+  margin-left: auto;
+  margin-top: -4vw;
+  width: 4vw;
+  height: 4vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.robot-image img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 0.5vw;
+  box-shadow: 0 0.2vw 0.5vw rgba(0, 0, 0, 0.1);
+}
+
+.robot-execution-status {
+  position: absolute;
+  bottom: 14vw;
+  left: 1.5vw;
+  right: 8.5vw; /* Leave space for robot image on the right */
+  background-color: #fff3cd; /* Cream background */
+  
+  border-radius: 0.4vw;
+  padding: 0.1vw;
+  font-size: 0.9vw;
+  color: #856404; /* Same color as notification messages */
+  font-weight: 600;
+  text-align: left;
+  min-height: 1.5vw;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  z-index: 10; /* Ensure it's above other elements */
+}
+
+.robot-execution-status p {
+  margin: 1vw;
+  font-size: 0.9vw;
+  color: #856404; /* Same color as notification messages */
+  font-weight: 600;
+  flex: 1;
+}
+
+/* No message styles */
+.message-container.no-message {
+  background-color: #fff3cd; /* Same as notification background */
+  border: 1px solid #ffeaa7;
+  border-radius: 0.4vw;
+  padding: 0.1vw;
+  margin-top: 9vw;
+  margin-bottom: 7vw;
+}
+
+.message-container.no-message p {
+  color: #856404; /* Same as notification text color */
+  font-weight: 600;
+  font-size: 0.9vw;
+  margin: 1vw;
+  flex: 1;
+  text-align: left;
+}

@@ -1,0 +1,311 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow:hidden;
+}
+
+
+.main-panel {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow:hidden;
+}
+
+.right-panel {
+  flex: 1;
+  min-width: 20%;
+  background-color: #f0f0f0;
+  padding: 0.6vw;
+  overflow-y: auto;
+  justify-content: flex-start; /* content starts at the top */
+  height: 100%;  
+  overflow-y: auto;            /* scroll if content is too long */
+}
+
+.left-panel {
+  flex: 3.8;
+  min-width: 50%;
+  display: flex;
+  flex-direction: column;
+  overflow:hidden;
+ 
+}
+
+.top-left-panel {
+  flex: 0.9; /* Take available space dynamically */
+  min-height: 0;
+  /* overflow-y: auto; */
+  overflow:hidden;
+  background-color: #fafafa;
+  padding: 0.4vw;
+  border-bottom: 0.2vw solid #ddd;
+  
+}
+
+.bottom-panel {
+  flex: 1.2; 
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  background-color: #fafafa;
+  padding: 0.1vw;
+  margin-bottom: 0;
+  margin-top: 0;
+  overflow:hidden;
+  
+}
+
+.instruction-content {
+  flex: 2;
+  overflow-y: auto;
+  margin-top: 0;
+  margin-right: 0.3vw;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.robot-communicator-column {
+  flex: 1;
+  background-color: #f9f9f9;
+  border-left: 0.1vw solid #ddd;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.robot-controls {
+  margin-top: 0.1vw;
+  display: flex;
+  gap:0.3vw;
+  justify-content: center;
+  padding: 0.3vw;
+  position: relative;
+  top: -3.5vw;
+}
+
+.robot-controls button {
+  padding: 1vw 2vw; 
+  font-size: 1.2vw;    
+  font-weight: bold;
+  margin: 0;
+  border: none;
+  border-radius: 0.4vw; 
+  background-color: #1976d2;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  min-width: 10vw;
+}
+
+.robot-controls button:hover {
+  background-color: #115293;
+}
+
+
+.task-item {
+  background: #fff;
+  border: 0.07vw solid #ddd; 
+  padding: 0.2vw;           
+  margin-bottom: 0.07vw;     
+  border-radius: 0.7vw;     
+  box-shadow: 0.07vw 0.07vw 0.28vw rgba(0,0,0,0.1);
+  user-select: none;
+  font-family: 'Arial', sans-serif;
+  font-size: 1.4vw;  
+  font-weight: bold;
+  
+}
+
+.mode-and-optimization {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1vw;                  
+  margin: 1.4vw 0;          
+}
+
+.optimization-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4vw;            
+}
+
+.mode-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.4vw;           
+}
+
+.mode-selector button,
+.optimization-toggle button {
+  padding: 0.4vw 1vw;       
+  border: 0.07vw solid #ccc; 
+  border-radius: 0.4vw;   
+  font-size: 1vw;   
+  cursor: pointer;
+}
+
+.mode-selector button.active-mode,
+.optimization-toggle button.active-mode {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.mode-selector h2 {
+  margin: 0;
+  font-size: 1.4vw;        
+  font-weight: bold;
+}
+
+.mode-label {
+  margin-right: 0.7vw;     
+  font-weight: bold;
+}
+
+/* Toggle bar and it's knob:  */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 3.15vw;          
+  height: 1.5vw;           
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #92bd97; /* Light orange color when off */
+  transition: 0.4s;
+  border-radius: 2.36vw;   
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 1vw;            /* size of save knob  */
+  width: 1vw;             
+  left: 0.28vw;             
+  bottom: 0.28vw;           
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+
+input:checked + .slider {
+  background-color: #4CAF50;
+}
+
+input:checked + .slider:before {
+  transform: translateX(1.53vw); 
+}
+
+/* Disabled state for toggle switch - maintain colors */
+.switch input:disabled + .slider {
+  background-color: #92bd97; /* Keep light orange when off */
+  cursor: not-allowed;
+}
+
+.switch input:disabled:checked + .slider {
+  background-color: #4CAF50; /* Keep green when on */
+  opacity: 1; /* Remove opacity reduction */
+}
+
+.switch input:disabled + .slider:before {
+  background-color: white; /* Keep white knob */
+}
+
+.question-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 1.4vw 2vw;        
+  border-radius: 0.7vw;      
+  box-shadow: 0 0.28vw 1vw rgba(0, 0, 0, 0.3); 
+  z-index: 1001;
+  width: 20.8vw;            
+  text-align: center;
+}
+
+.question-popup h3 {
+  margin-bottom: 0.7vw;      
+  font-size: 1.2rem;
+}
+
+.question-popup input {
+  width: 100%;
+  padding: 0.6vw;           
+  margin: 0.7vw 0;           
+  border: 0.07vw solid #ccc; 
+  border-radius: 0.35vw;    
+}
+
+.question-popup button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.6vw 1.1vw;     
+  border-radius: 0.35vw;   
+  cursor: pointer;
+}
+
+.question-popup button:hover {
+  background: #0056b3;
+}
+
+.question-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.toggle-container {
+  display: flex;
+  border: 0.14vw solid #ccc; 
+  border-radius: 1.4vw;      
+  overflow: hidden;
+  width: 10.4vw;             
+  background-color: #f1f1f1;
+  cursor: pointer;
+}
+
+.toggle-option {
+  flex: 1;
+  text-align: center;
+  padding: 0.8vw 0;       
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.toggle-option.active {
+  background-color: #4caf50;
+  color: white;
+}
+
+.toggle-option.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+@media (max-width: 768px) {
+  .task-item { font-size: 2vw; }
+  .robot-controls button { font-size: 2.5vw; padding: 1vw 2vw; }
+}
