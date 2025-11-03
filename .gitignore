@@ -5,6 +5,7 @@ __pycache__/
 *.so
 .Python
 build/
+*.xlsx
 Experiment/
 backend/log/UrDataLog.csv
 develop-eggs/
